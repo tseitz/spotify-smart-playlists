@@ -1,0 +1,20 @@
+{
+  "name": "spotify-smart-playlists",
+  "version": "0.0.1",
+  "description": "Turn playlist into smart playlist like MediaMonkey",
+  "main": "src/index.ts",
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^14.0.22",
+    "@types/node-fetch": "^2.5.7",
+    "ts-node": "^8.10.2",
+    "typescript": "^3.9.6"
+  },
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "author": "Tegan Seitz",
+  "license": "ISC"
+}

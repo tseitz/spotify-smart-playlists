@@ -1,0 +1,4 @@
+POST https://accounts.spotify.com/api/token HTTP/1.1
+Authorization: 'Basic Nzc5OWFmMzY1N2I2NGJkNTgyNzE1ODJkODQ1NWEyNjI6M2U1NWUxNzI4YjUxNDc2YTg5ZDAzM2NhYzE3ODU2ZDk='
+
+grant_type=client_credentials
