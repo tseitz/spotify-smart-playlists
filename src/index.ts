@@ -2,10 +2,11 @@ import fetch from 'node-fetch'
 
 const TOKEN_URI = 'https://accounts.spotify.com/api/token'
 const BASE_URI = 'https://api.spotify.com/v1'
+const MY_PLAYLIST_URL = 'https://api.spotify.com/v1/me/playlists'
 
 interface Credentials {
-  id: string
-  secret: string
+  id?: string
+  secret?: string
 }
 interface Token {
   access_token: string
@@ -79,6 +80,23 @@ class Spotify {
     return await res.json()
   }
 
+  async getAllPlaylists(href: string) {
+    const opts: any = { method: 'GET' }
+    opts.headers = this.getTokenHeader()
+
+    const res = await fetch(href, opts)
+    const playlists = await res.json()
+
+    // Fancy smanshy recursion
+    if (playlists.next) {
+      return playlists.items.concat(
+        await this.getAllPlaylistTracks(playlists.next)
+      )
+    } else {
+      return playlists.items
+    }
+  }
+
   async getPlaylistTracks(href: string) {
     const opts: any = { method: 'GET' }
     opts.headers = this.getTokenHeader()
@@ -108,38 +126,96 @@ class Spotify {
     //   )
     // }
     return {
-      Authorization: `Bearer BQAdUURJDAhR_H4eeNRSNBCPBsdFN4N0OVP7-DLr3-w3JMq19dc-IpTe8qtzWIoHyKWG_allMCXnA5JebvJs3hjIxxOSjYGVLnsPrYQwAQ0XPpV5_p7iD9Hg7JljLaHZ0tgFPOiRVtmQEiterDHsTuH-86Ro68AtRJIaUaYbd-ONt3-rUqoc9Vz_sM_Z50J4E-AQa4hP6-D4mpB5hG4hnZuNnYstd85YrhlZIDg`,
+      Authorization: `Bearer BQAQ5NF0SpFExs88gnI9VuLImW2zYPq7gnj3MnRg3ccu72JyZ34F7lwtJB1oJq0ubMrBq4CCVvcfWaaIKDl2spXvPVA7Wp5FjvtzcD3YkXl_TucURE_H4pxCnbpiMlIDbAv2uQFwz13jU9Aljsc9cbw8o72kWm-n6KZALKHu2wyA5Vn_GkdPGK2YJDfd4lpMzQOxaZgKUAHk2pRpMZBI_IdDI27oWS3j5ETnDag`,
     }
   }
 }
 
-const SMART_PLAYLISTS = ['Festival', 'Bangers']
+const SMART_PLAYLISTS = ['Festival'] //, 'Banger']
+const CHECK_PLAYLISTS = [
+  'Beats',
+  'Chill Vibes',
+  'Deep Dark n Dangerous',
+  'Deep In The Night',
+  'DnB',
+  'DnB Liquid',
+  'Heavy Shit',
+  'Midtempo',
+  'Neuro Bass',
+  'Riddim',
+]
 
 const spotify = new Spotify({
   id: process.env.SPOTIFY_CLIENT_ID,
   secret: process.env.SPOTIFY_CLIENT_SECRET,
 })
 
-const playlists = []
-spotify.getPlaylists().then((res) => {
-  res.items.forEach((playlist, index) => {
-    const mappedPlaylist = { name: playlist.name, items: [] }
-    if (index < 3) {
-      spotify.getAllPlaylistTracks(playlist.tracks.href).then((items) => {
-        mappedPlaylist.items = trackReducer(items)
-        playlists.push(mappedPlaylist)
-        console.log(playlists)
-      })
-    }
-  })
-})
+interface MappedTrack {
+  name: string
+  href: string
+}
 
-function trackReducer(tracks: any[]) {
+interface MappedPlaylist {
+  name: string
+  tracks: MappedTrack[]
+}
+
+async function run() {
+  const allPlaylists = await spotify.getAllPlaylists(MY_PLAYLIST_URL)
+
+  // filter out the ones we don't care about
+  const filteredPlaylists = allPlaylists.filter(
+    (playlist) =>
+      SMART_PLAYLISTS.some((name) => playlist.name.startsWith(name)) ||
+      (CHECK_PLAYLISTS.some((name) => playlist.name.startsWith(name)) &&
+        playlist.name !== 'Festival Test')
+  )
+
+  filteredPlaylists.forEach((playlist) => {
+    console.log(playlist.name)
+  })
+
+  const mapped: MappedPlaylist[] = await filteredPlaylists.map(
+    async (playlist): Promise<MappedPlaylist> => {
+      const mappedPlaylist: MappedPlaylist = { name: playlist.name, tracks: [] }
+
+      const items = await spotify.getAllPlaylistTracks(playlist.tracks.href)
+
+      mappedPlaylist.tracks = trackReducer(items)
+      return mappedPlaylist
+    }
+  )
+
+  // once we grab all the tracks, lets categorize them
+  Promise.all(mapped).then((mappedPlaylists) => {
+    // const banger = mappedPlaylists.filter(
+    //   (playlist) => playlist.name === 'Banger'
+    // )
+    const festival = mappedPlaylists.filter(
+      (playlist) => playlist.name === 'Festival'
+    )
+    const checkPlaylists = mappedPlaylists.filter(
+      (playlist) => playlist.name !== 'Festival' // && playlist.name !== 'Banger'
+    )
+    checkPlaylists.forEach((playlist) => {
+      // if (playlist.name.startsWith('Banger')) {
+      //   // bangers
+      // }
+      if (playlist.name === 'Festival Not Heavy') {
+        // festival
+      }
+    })
+  })
+}
+
+function trackReducer(tracks: any[]): MappedTrack[] {
   return tracks.map((track) => {
     return {
       name: track.track.name,
       href: track.track.href,
-      artists: track.track.artists,
+      // artists: track.track.artists,
     }
   })
 }
+
+run()
