@@ -1,8 +1,11 @@
 import fetch from 'node-fetch'
+import { smartPlaylists, SmartPlaylist } from '../data/smartPlaylists'
 
 const TOKEN_URI = 'https://accounts.spotify.com/api/token'
 const BASE_URI = 'https://api.spotify.com/v1'
-const MY_PLAYLIST_URL = 'https://api.spotify.com/v1/me/playlists'
+const MY_PLAYLIST_URL = `${BASE_URI}/me/playlists`
+const TOKEN =
+  'BQDanxqxW19dgulNl0tcSMk-9uY2zRasHq7EGZoDZpQ4E4ovJtDS_KtOWC61OodjDGlsS5O-69H6bgFt_u00nVqYvOkoUn_hH83eyJmfgi5lcBHEi9S8lmmwEX-NHJaGbyJU7F3mnVHTKtLXkWgKBgGqaHFyMSNfAiLAm5eSUelbqR5wh2T3KZfA4-pIwJkHXWlysMPiylPI2CnLTiIsB4RxC_DFgFiGVdCBQto'
 
 interface Credentials {
   id?: string
@@ -63,7 +66,7 @@ class Spotify {
   // }
 
   async getPlaylists() {
-    const URI = 'https://api.spotify.com/v1/me/playlists'
+    const URI = `${BASE_URI}/me/playlists`
     const opts: any = { method: 'GET' }
 
     // if (!this.token || !this.token.access_token) {
@@ -123,7 +126,7 @@ class Spotify {
     const opts: any = { method: 'POST', body: JSON.stringify({ uris }) }
     console.log(opts.body)
     opts.headers = this.getPostHeader()
-    const URI = `https://api.spotify.com/v1/playlists/${id}/tracks`
+    const URI = `${BASE_URI}/playlists/${id}/tracks`
 
     // TODO: Check if over 100 items
     const res = await fetch(URI, opts)
@@ -139,31 +142,17 @@ class Spotify {
     //   )
     // }
     return {
-      Authorization: `Bearer BQAYxqJ6ox5qIHJAVp6cMFK3sYwDJ4jwOQuF7WheuNXYUy8KpYqsld3ETBK2PxjQRxQNrx6sbVWQlGnOhMPbQSLHNYInnseOFO6yPXfmYu6SSzpW_sw0G5ZyYoXutBxqkqzFIW-O0lfzRU1wKxR1Ywayt3PcBkFiJH0RW2ylp1cyrBK_RuWqUkxrZJoQw5cO6kDJPFljgRRQucbHrdPTt6I5iuPHr8379_E_m0w`,
+      Authorization: `Bearer ${TOKEN}`,
     }
   }
 
   getPostHeader() {
     return {
       'Content-Type': 'application/json',
-      Authorization: `Bearer BQAYxqJ6ox5qIHJAVp6cMFK3sYwDJ4jwOQuF7WheuNXYUy8KpYqsld3ETBK2PxjQRxQNrx6sbVWQlGnOhMPbQSLHNYInnseOFO6yPXfmYu6SSzpW_sw0G5ZyYoXutBxqkqzFIW-O0lfzRU1wKxR1Ywayt3PcBkFiJH0RW2ylp1cyrBK_RuWqUkxrZJoQw5cO6kDJPFljgRRQucbHrdPTt6I5iuPHr8379_E_m0w`,
+      Authorization: `Bearer ${TOKEN}`,
     }
   }
 }
-
-const SMART_PLAYLISTS = ['Festival'] //, 'Banger']
-const CHECK_PLAYLISTS = [
-  // 'Beats',
-  // 'Chill Vibes',
-  // 'Deep Dark n Dangerous',
-  // 'Deep In The Night',
-  // 'DnB',
-  // 'DnB Liquid',
-  'Heavy Shit',
-  // 'Midtempo',
-  // 'Neuro Bass',
-  // 'Riddim',
-]
 
 const spotify = new Spotify({
   id: process.env.SPOTIFY_CLIENT_ID,
@@ -185,17 +174,18 @@ interface MappedPlaylist {
 async function run() {
   const allPlaylists = await spotify.getAllPlaylists(MY_PLAYLIST_URL)
 
-  // filter out the ones we don't care about
-  const filteredPlaylists = allPlaylists.filter(
-    (playlist) =>
-      SMART_PLAYLISTS.some((name) => playlist.name.startsWith(name)) ||
-      (CHECK_PLAYLISTS.some((name) => playlist.name.startsWith(name)) &&
-        playlist.name !== 'Festival Test')
+  // create unique list of playlists to grab from spotify
+  const analyzePlaylists = Array.from(
+    new Set(smartPlaylists.flatMap((smart) => [smart.source, smart.check]))
   )
 
-  // filteredPlaylists.forEach((playlist) => {
-  //   console.log(playlist.name)
-  // })
+  // filter out the ones we don't care about
+  // TODO: Could be better, create list based on input file. IE Banger, DnB and Not
+  const filteredPlaylists = allPlaylists.filter(
+    (playlist) =>
+      analyzePlaylists.some((name) => playlist.name.startsWith(name)) &&
+      playlist.name !== 'Festival Test'
+  )
 
   const mapped: MappedPlaylist[] = await filteredPlaylists.map(
     async (playlist): Promise<MappedPlaylist> => {
@@ -212,44 +202,11 @@ async function run() {
     }
   )
 
-  // console.log(mapped)
-
   // once we grab all the tracks, lets categorize them
   Promise.all(mapped).then((mappedPlaylists) => {
-    // const banger = mappedPlaylists.filter(
-    //   (playlist) => playlist.name === 'Banger'
-    // )
-    // console.log(mappedPlaylists)
-    const festival = mappedPlaylists.filter(
-      (playlist) => playlist.name === 'Festival'
-    )[0]
-    const festivalNotHeavy = mappedPlaylists.filter(
-      (playlist) => playlist.name === 'Festival Not Heavy'
-    )[0]
-    const heavy = mappedPlaylists.filter(
-      (playlist) => playlist.name === 'Heavy Shit'
-    )[0]
-    const checkPlaylists = mappedPlaylists.filter(
-      (playlist) => playlist.name !== 'Festival' // && playlist.name !== 'Banger'
-    )
-    const heavyRefs = heavy.tracks.map((track) => track.href)
-    const festivalNotHeavyRefs = festivalNotHeavy.tracks.map(
-      (track) => track.href
-    )
-
-    // Move all not heavy songs to Festival Not Heavy
-    const festivalNotHeavyArr: MappedTrack[] = []
-    festival.tracks.forEach((track) => {
-      if (
-        !heavyRefs.includes(track.href) &&
-        !festivalNotHeavyRefs.includes(track.href)
-      ) {
-        festivalNotHeavyArr.push(track)
-      }
+    smartPlaylists.forEach((smartPlaylist) => {
+      smartify(mappedPlaylists, smartPlaylist)
     })
-    const uris = festivalNotHeavyArr.map((track) => track.uri)
-    console.log(uris.length)
-    spotify.postPlaylistTracks(festivalNotHeavy.playlistId, uris)
   })
 }
 
@@ -259,9 +216,86 @@ function trackReducer(tracks: any[]): MappedTrack[] {
       name: track.track.name,
       href: track.track.href,
       uri: track.track.uri,
-      // artists: track.track.artists,
     }
   })
+}
+
+function smartify(
+  allPlaylists: MappedPlaylist[],
+  { source, check, notPlaylist }: SmartPlaylist // notPlaylist = Festival Not Heavy, Bangers Not Heavy (essentially do the opposite)
+) {
+  const destination = `${source}${notPlaylist ? ' Not ' : ' '}${check}`
+  console.log(destination)
+  const sourcePlaylist = allPlaylists.filter(
+    (playlist) => playlist.name === source
+  )[0]
+  const destinationPlaylist = allPlaylists.filter(
+    (playlist) => playlist.name === destination
+  )[0]
+  const checkPlaylist = allPlaylists.filter(
+    (playlist) => playlist.name === check
+  )[0]
+  // URI's to add and remove
+  const addTracks: string[] = []
+  const removeTracks: string[] = []
+
+  const checkUris = checkPlaylist.tracks.map((track) => track.uri)
+  const destinationUris = destinationPlaylist.tracks.map((track) => track.uri)
+
+  if (notPlaylist) {
+    // IE if Festival (source) is not in heavy and not in Festival Not Heavy, add to destination
+    sourcePlaylist.tracks.forEach((track) => {
+      if (
+        !checkUris.includes(track.uri) &&
+        !destinationUris.includes(track.uri)
+      ) {
+        addTracks.push(track.uri)
+      }
+    })
+  } else {
+    // IE if Bangers in heavy and not in Bangers Heavy, add to destination
+    sourcePlaylist.tracks.forEach((track) => {
+      if (
+        checkUris.includes(track.uri) &&
+        !destinationUris.includes(track.uri)
+      ) {
+        addTracks.push(track.uri)
+      }
+    })
+  }
+  console.log(addTracks.length)
+  // spotify.postPlaylistTracks(destinationPlaylist.playlistId, addTracks)
+
+  // Now check removals
+  // { source: 'Banger', check: 'DnB', notPlaylist: false },
+  // if (notPlaylist) {
+  //   checkUris.forEach((uri) => {
+  //     if (notPlaylist && !destinationUris.includes(uri)) {
+  //       // If not in Heavy, but in Banger Heavy, remove from Banger Heavy
+  //       removeTracks.push(uri)
+  //     } else if (!notPlaylist && destinationUris.includes(uri)) {
+  //       // If in heavy, and in Festival Not Heavy, remove from Festival Not Heavy
+  //       removeTracks.push(uri)
+  //     }
+  //   })
+  // } else {
+  // if in Festival Not Heavy (destination) but not Heavy (check) remove
+  // If in Banger DnB (destination) but not DnB (check) remove
+  destinationUris.forEach((uri) => {
+    if (!checkUris.includes(uri)) {
+      // removeTracks.push(uri)
+      addTracks.push(uri)
+    }
+  })
+  // }
+  console.log(removeTracks.length)
+  console.log(
+    destinationPlaylist.tracks.filter((playlist) =>
+      addTracks.includes(playlist.uri)
+    )
+  )
+  // spotify.postPlaylistTracks(checkPlaylist.playlistId, addTracks)
+  // spotify.removePlaylistTracks(destinationPlaylist.playlistId, removeTracks)
 }
 
 run()

@@ -11,6 +11,6 @@
     "strictNullChecks": true,
     // "noUnusedLocals": true,
     "typeRoots": ["node_modules/@types"],
-    "lib": ["dom", "es7", "es2017"]
+    "lib": ["dom", "es7", "es2017", "es2019"]
   }
 }
