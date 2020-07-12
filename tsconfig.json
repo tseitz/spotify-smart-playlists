@@ -3,7 +3,7 @@
     "target": "es2016",
     "module": "commonjs", // es2015 not supported by ts-node
     "baseUrl": "src",
-    "outDir": "../output",
+    "outDir": "build",
     "sourceMap": true,
     "declaration": false,
     "moduleResolution": "node",
