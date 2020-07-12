@@ -7,7 +7,7 @@ const BASE_URI = 'https://api.spotify.com/v1'
 
 // TODO: Get token in app
 const TOKEN =
-  'BQDcgKFYICZgM_Pks74Gz8XNDfMXJFQ7FNqR8Fscc_ULPMD_VYRtApkWMLUdqRetruLmqzLnlNwNayUupyG9UF_iiTsZo6nu5HL5HkzH7keAoiICKLRUWc1OhB7rttUOb'
+  'BQAaoAyRC757l31MeNdNerTN8Qq_TDv2lWRBLOdfPtZeM7WFUvDCIxR4NH4wvjJdptBxUOx3Ko5O0cWsLFxNfrAumNMh75dcOdPzFx0PRzFuTr30tUCCWtYYQlAsGznL4Yu7uRfuYaVETx7R4M-xDiQ-VMSPIesjMW3RMM4WwLdjA7VRHFslfVUdC_-4KGgaKT0VjfiURyCGLxSW01p6ryvqFA2cvmYLz9UsKTs'
 
 interface Credentials {
   id: string | undefined
@@ -67,25 +67,6 @@ export class Spotify {
   //   }
   //   return false
   // }
-
-  async getPlaylists() {
-    const URI = `${BASE_URI}/me/playlists`
-    const opts: any = { method: 'GET' }
-
-    // if (!this.token || !this.token.access_token) {
-    //   // || !this.isTokenExpired())
-    //   this.setToken().then(async () => {
-    //     opts.headers = this.getTokenHeader()
-    //     const res = await fetch(URI, opts)
-    //     const body = await res.json()
-    //     console.log(body)
-    //   })
-    // } else {
-
-    opts.headers = this.getTokenHeader()
-    const res = await fetch(URI, opts)
-    return await res.json()
-  }
 
   async getAllMyPlaylists() {
     const url = `${BASE_URI}/me/playlists`

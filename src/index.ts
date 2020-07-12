@@ -20,7 +20,7 @@ const spotify = new Spotify({
 
 async function run() {
   // grab all playlists
-  const allPlaylists = await spotify.getAllMyPlaylists()
+  const allPlaylists: any[] = await spotify.getAllMyPlaylists()
 
   // create unique list of playlists to grab from spotify. First time using flatMap!
   const analyzePlaylists = Array.from(
@@ -36,7 +36,7 @@ async function run() {
   )
 
   // grab all tracks for the playlist and reduce them to the items we care about
-  const mapped: MappedPlaylist[] = await filteredPlaylists.map(
+  const mapped: Promise<MappedPlaylist>[] = await filteredPlaylists.map(
     async (playlist): Promise<MappedPlaylist> => {
       const mappedPlaylist: MappedPlaylist = {
         name: playlist.name,
@@ -85,47 +85,54 @@ function smartify(
     playlist => playlist.name === check
   )[0]
 
+  console.log('Check:', check, checkPlaylist.tracks.length)
+  console.log('Source:', source, sourcePlaylist.tracks.length)
+  console.log('Destination:', destination, destinationPlaylist.tracks.length)
+
   // URI's to add and remove
   const addTracks: string[] = []
   const removeTracks: string[] = []
 
   const checkUris = checkPlaylist.tracks.map(track => track.uri)
+  const sourceUris = sourcePlaylist.tracks.map(track => track.uri)
   const destinationUris = destinationPlaylist.tracks.map(track => track.uri)
 
   // Add Tracks
-  if (notPlaylist) {
-    // i.e. track is in Festival & not in Heavy, we need to add these to Festival Not Heavy
-    sourcePlaylist.tracks.forEach(track => {
-      if (
-        !checkUris.includes(track.uri) &&
-        !destinationUris.includes(track.uri)
-      ) {
-        addTracks.push(track.uri)
-      }
-    })
-  } else {
-    // i.e. track is in Bangers & Heavy and not in Bangers Heavy, we need to add these to Bangers Heavy
-    sourcePlaylist.tracks.forEach(track => {
-      if (
-        checkUris.includes(track.uri) &&
-        !destinationUris.includes(track.uri)
-      ) {
-        addTracks.push(track.uri)
-      }
-    })
-  }
-  console.log(addTracks.length)
+  sourcePlaylist.tracks.forEach(track => {
+    // Add to Bangers Heavy if in Bangers & Heavy
+    if (
+      !notPlaylist &&
+      checkUris.includes(track.uri) &&
+      !destinationUris.includes(track.uri)
+    )
+      addTracks.push(track.uri)
+
+    // Add to Festival Not Heavy if in Festival & not in Heavy
+    if (
+      notPlaylist &&
+      !checkUris.includes(track.uri) &&
+      !destinationUris.includes(track.uri)
+    )
+      addTracks.push(track.uri)
+  })
+  console.log('Tracks to Add:', addTracks.length)
   // spotify.postPlaylistTracks(destinationPlaylist.playlistId, addTracks)
 
   // Remove Tracks
   destinationUris.forEach(uri => {
-    // If in Banger Heavy but not Heavy remove
-    if (!checkUris.includes(uri)) {
+    // If in Banger Heavy, but not Heavy or Banger, remove it
+    if ((!notPlaylist && !checkUris.includes(uri)) || !sourceUris.includes(uri))
       removeTracks.push(uri)
-    }
+
+    // If in Festival Not Heavy, but it's not in Festival or in it's in Heavy, remove it
+    if ((notPlaylist && checkUris.includes(uri)) || !sourceUris.includes(uri))
+      removeTracks.push(uri)
   })
 
-  console.log(removeTracks.length)
+  console.log(
+    "Tracks to Remove (technically we're adding right now):",
+    removeTracks.length
+  )
   console.log(
     destinationPlaylist.tracks.filter(playlist =>
       addTracks.includes(playlist.uri)

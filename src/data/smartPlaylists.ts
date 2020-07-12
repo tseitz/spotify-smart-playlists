@@ -5,6 +5,7 @@ export interface SmartPlaylist {
 }
 
 // notPlaylist = Festival Not Heavy, Bangers Not Heavy (essentially do the opposite when categorizing)
+// I really need a better name but I've got nothin
 export const smartPlaylists: SmartPlaylist[] = [
   { source: 'Festival', check: 'Heavy', notPlaylist: true },
   // { source: 'Family', check: 'Test', notPlaylist: true }, // TODO: what to do with test?
