@@ -7,7 +7,7 @@ const BASE_URI = 'https://api.spotify.com/v1'
 
 // TODO: Get token in app
 const TOKEN =
-  'BQAaoAyRC757l31MeNdNerTN8Qq_TDv2lWRBLOdfPtZeM7WFUvDCIxR4NH4wvjJdptBxUOx3Ko5O0cWsLFxNfrAumNMh75dcOdPzFx0PRzFuTr30tUCCWtYYQlAsGznL4Yu7uRfuYaVETx7R4M-xDiQ-VMSPIesjMW3RMM4WwLdjA7VRHFslfVUdC_-4KGgaKT0VjfiURyCGLxSW01p6ryvqFA2cvmYLz9UsKTs'
+  'BQDy7Fque52aNNjcATfx7J66whqVC1GuZgibnvMwRfnvsHcBF2kWn2xv0nTDFpc2W0uCe5QFFI6oizFF9uVp9zaUkRpRup1elyV1f1ZilLbVM3ZDddDKi8lJvsPydr7ilin9iE-iiSH7VUXP5BL_Oan5Z4i1zQKhpXd7O4nnUsJzyrQ_Cvj8R8CotkOxNJSLFqEVaZlX8NfYjQHc5_zAGO9Y2fAPb5ZfiVquZAY'
 
 interface Credentials {
   id: string | undefined
@@ -110,6 +110,7 @@ export class Spotify {
   }
 
   async postPlaylistTracks(id: string, uris: string[]) {
+    if (uris.length === 0) return
     const url = `${BASE_URI}/playlists/${id}/tracks`
     const opts: any = { method: 'POST', body: JSON.stringify({ uris }) }
     opts.headers = this.getPostHeader()
@@ -119,7 +120,9 @@ export class Spotify {
       throw new Error('Too many items in URIs. Split them up please.')
 
     const res = await fetch(url, opts)
-    return await res.json()
+    const log = await res.json()
+    console.log(log)
+    return log
   }
 
   getTokenHeader() {

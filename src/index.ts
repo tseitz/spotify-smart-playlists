@@ -85,6 +85,10 @@ function smartify(
     playlist => playlist.name === check
   )[0]
 
+  const weirdPlaylist = allPlaylists.filter(
+    playlist => playlist.name === 'Weird'
+  )[0]
+
   console.log('Check:', check, checkPlaylist.tracks.length)
   console.log('Source:', source, sourcePlaylist.tracks.length)
   console.log('Destination:', destination, destinationPlaylist.tracks.length)
@@ -96,6 +100,7 @@ function smartify(
   const checkUris = checkPlaylist.tracks.map(track => track.uri)
   const sourceUris = sourcePlaylist.tracks.map(track => track.uri)
   const destinationUris = destinationPlaylist.tracks.map(track => track.uri)
+  const weirdUris = destinationPlaylist.tracks.map(track => track.uri)
 
   // Add Tracks
   sourcePlaylist.tracks.forEach(track => {
@@ -116,30 +121,45 @@ function smartify(
       addTracks.push(track.uri)
   })
   console.log('Tracks to Add:', addTracks.length)
+  const removeLocal = addTracks.filter(track => !track.includes('local'))
+  console.log(removeLocal) // TODO: bug, remove
+  spotify.postPlaylistTracks(destinationPlaylist.playlistId, removeLocal)
   // spotify.postPlaylistTracks(destinationPlaylist.playlistId, addTracks)
 
   // Remove Tracks
   destinationUris.forEach(uri => {
     // If in Banger Heavy, but not Heavy or Banger, remove it
-    if ((!notPlaylist && !checkUris.includes(uri)) || !sourceUris.includes(uri))
+    if (!notPlaylist && (!checkUris.includes(uri) || !sourceUris.includes(uri)))
       removeTracks.push(uri)
 
     // If in Festival Not Heavy, but it's not in Festival or in it's in Heavy, remove it
-    if ((notPlaylist && checkUris.includes(uri)) || !sourceUris.includes(uri))
+    if (
+      notPlaylist &&
+      (checkUris.includes(uri) || !sourceUris.includes(uri)) &&
+      !weirdUris.includes(uri)
+    )
       removeTracks.push(uri)
   })
-
   console.log(
     "Tracks to Remove (technically we're adding right now):",
     removeTracks.length
   )
-  console.log(
-    destinationPlaylist.tracks.filter(playlist =>
-      addTracks.includes(playlist.uri)
-    )
-  )
-  // spotify.postPlaylistTracks(checkPlaylist.playlistId, addTracks)
   // spotify.removePlaylistTracks(destinationPlaylist.playlistId, removeTracks)
+  // spotify.postPlaylistTracks(checkPlaylist.playlistId, removeTracks)
+  const removeLocal2 = removeTracks.filter(track => !track.includes('local'))
+  console.log(removeLocal2) // TODO: bug, remove
+  spotify.postPlaylistTracks(checkPlaylist.playlistId, removeLocal2)
+
+  // Logging Porpoises
+  const addTrackDetails = sourcePlaylist.tracks.filter(track =>
+    // removeLocal.includes(track.uri)
+    addTracks.includes(track.uri)
+  )
+  console.log(addTrackDetails)
+  const removeTrackDetails = destinationPlaylist.tracks.filter(track =>
+    removeTracks.includes(track.uri)
+  )
+  console.log(removeTrackDetails)
 }
 
 run()
