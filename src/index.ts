@@ -1,17 +1,5 @@
 import { smartPlaylists, SmartPlaylist } from './data/smartPlaylists'
-import { Spotify } from './models/Spotify'
-
-interface MappedTrack {
-  name: string
-  href: string
-  uri: string
-}
-
-interface MappedPlaylist {
-  name: string
-  playlistId: string
-  tracks: MappedTrack[]
-}
+import { Spotify, MappedPlaylist, RemoveTrack } from './models/Spotify'
 
 const spotify = new Spotify({
   id: process.env.SPOTIFY_CLIENT_ID,
@@ -37,18 +25,7 @@ async function run() {
 
   // grab all tracks for the playlist and reduce them to the items we care about
   const mapped: Promise<MappedPlaylist>[] = await filteredPlaylists.map(
-    async (playlist): Promise<MappedPlaylist> => {
-      const mappedPlaylist: MappedPlaylist = {
-        name: playlist.name,
-        playlistId: playlist.id,
-        tracks: [],
-      }
-
-      const items = await spotify.getAllPlaylistTracks(playlist.tracks.href)
-      mappedPlaylist.tracks = trackReducer(items)
-
-      return mappedPlaylist
-    }
+    async playlist => await spotify.mapPlaylistTracks(playlist)
   )
 
   // once we grab all the tracks, lets categorize them
@@ -56,16 +33,6 @@ async function run() {
     smartPlaylists.forEach(smartPlaylist => {
       smartify(mappedPlaylists, smartPlaylist)
     })
-  })
-}
-
-function trackReducer(tracks: any[]): MappedTrack[] {
-  return tracks.map(track => {
-    return {
-      name: track.track.name,
-      href: track.track.href,
-      uri: track.track.uri,
-    }
   })
 }
 
@@ -162,4 +129,42 @@ function smartify(
   console.log(removeTrackDetails)
 }
 
-run()
+async function removeNah() {
+  const allPlaylists: any[] = await spotify.getAllMyPlaylists()
+
+  const filteredPlaylists = allPlaylists.filter(
+    playlist => playlist.name === 'Unrated' || playlist.name === 'Nah'
+  )
+
+  const mapped: Promise<MappedPlaylist>[] = await filteredPlaylists.map(
+    async playlist => await spotify.mapPlaylistTracks(playlist)
+  )
+
+  Promise.all(mapped).then(mappedPlaylists => {
+    const unratedPlaylist = mappedPlaylists.filter(
+      playlist => playlist.name === 'Unrated'
+    )[0]
+    const nahPlaylist = mappedPlaylists.filter(
+      playlist => playlist.name === 'Nah'
+    )[0]
+
+    const removeTracks: RemoveTrack[] = []
+
+    const unratedUris = unratedPlaylist.tracks.map(track => track.uri)
+    const nahUris = nahPlaylist.tracks.map(track => track.uri)
+
+    nahUris.forEach(uri => {
+      if (unratedUris.includes(uri)) {
+        removeTracks.push({ uri })
+      }
+    })
+
+    console.log(removeTracks)
+
+    spotify.removePlaylistTracks(unratedPlaylist.playlistId, removeTracks)
+    spotify.removePlaylistTracks(nahPlaylist.playlistId, removeTracks)
+  })
+}
+
+// run()
+removeNah()

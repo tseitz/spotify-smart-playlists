@@ -7,7 +7,7 @@ const BASE_URI = 'https://api.spotify.com/v1'
 
 // TODO: Get token in app
 const TOKEN =
-  'BQDy7Fque52aNNjcATfx7J66whqVC1GuZgibnvMwRfnvsHcBF2kWn2xv0nTDFpc2W0uCe5QFFI6oizFF9uVp9zaUkRpRup1elyV1f1ZilLbVM3ZDddDKi8lJvsPydr7ilin9iE-iiSH7VUXP5BL_Oan5Z4i1zQKhpXd7O4nnUsJzyrQ_Cvj8R8CotkOxNJSLFqEVaZlX8NfYjQHc5_zAGO9Y2fAPb5ZfiVquZAY'
+  'BQDKj1wx_Q9A1YjLWdCwS3jr0EXl-9BWiTJbKxdlBDBqj90V2pnoOoVfddCYKy1MuD6xFNp83wpxd86mnC7cM46o8Dql-xvBs7gElA-WraKKn_MhP4m5xAdWZRqdez7slaRWbGjzivmazolbJJaq1oWtPThe5YaNWNiRqRLf6K5te6NkKzx-WMxAKH4B8lhp_tsQyXAp-6yKO55ffZ5c3ZkrN4aHpkrFeg1rc8w'
 
 interface Credentials {
   id: string | undefined
@@ -19,6 +19,22 @@ interface Token {
   token_type: string
   expires_in: number
   scope: string
+}
+
+export interface MappedPlaylist {
+  name: string
+  playlistId: string
+  tracks: MappedTrack[]
+}
+
+interface MappedTrack {
+  name: string
+  href: string
+  uri: string
+}
+
+export interface RemoveTrack {
+  uri: string
 }
 
 export class Spotify {
@@ -109,6 +125,19 @@ export class Spotify {
     }
   }
 
+  async mapPlaylistTracks(playlist): Promise<MappedPlaylist> {
+    const mappedPlaylist: MappedPlaylist = {
+      name: playlist.name,
+      playlistId: playlist.id,
+      tracks: [],
+    }
+
+    const items = await this.getAllPlaylistTracks(playlist.tracks.href)
+    mappedPlaylist.tracks = this.trackReducer(items)
+
+    return mappedPlaylist
+  }
+
   async postPlaylistTracks(id: string, uris: string[]) {
     if (uris.length === 0) return
     const url = `${BASE_URI}/playlists/${id}/tracks`
@@ -123,6 +152,35 @@ export class Spotify {
     const log = await res.json()
     console.log(log)
     return log
+  }
+
+  async removePlaylistTracks(id: string, uris: RemoveTrack[]) {
+    if (uris.length === 0) return
+    const url = `${BASE_URI}/playlists/${id}/tracks`
+    const opts: any = {
+      method: 'DELETE',
+      body: JSON.stringify({ tracks: uris }),
+    }
+    opts.headers = this.getPostHeader()
+
+    // TODO: Handle when over 100 items
+    if (uris.length > 99)
+      throw new Error('Too many items in URIs. Split them up please.')
+
+    const res = await fetch(url, opts)
+    const log = await res.json()
+    console.log(log)
+    return log
+  }
+
+  trackReducer(tracks: any[]): MappedTrack[] {
+    return tracks.map(track => {
+      return {
+        name: track.track.name,
+        href: track.track.href,
+        uri: track.track.uri,
+      }
+    })
   }
 
   getTokenHeader() {
