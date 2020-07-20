@@ -22,4 +22,29 @@ export const smartPlaylists: SmartPlaylist[] = [
   // { source: 'Banger', check: 'Riddim', notPlaylist: false },
 ]
 
+export const checkPlaylists = [
+  'Festival',
+  'Family',
+  'Banger',
+  'Beats',
+  'Chill Vibes',
+  'Deep Dark n Dangerous',
+  'Deep In The Night',
+  'DnB',
+  'DnB Liquid',
+  'Family Test',
+  'Festival Test',
+  'GOAT',
+  'Heavy',
+  'Midtempo',
+  'Weird',
+  'Mix This',
+  'Neuro Bass',
+  'Rap/Hip Hop',
+  'Riddim',
+  'Trippy Shit',
+  'Wonky',
+  'Feels',
+]
+
 // TODO: WHAT IF IT"S IN BANGER DNB BUT NOT BANGER??

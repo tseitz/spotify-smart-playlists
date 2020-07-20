@@ -7,7 +7,7 @@ const BASE_URI = 'https://api.spotify.com/v1'
 
 // TODO: Get token in app
 const TOKEN =
-  'BQDKj1wx_Q9A1YjLWdCwS3jr0EXl-9BWiTJbKxdlBDBqj90V2pnoOoVfddCYKy1MuD6xFNp83wpxd86mnC7cM46o8Dql-xvBs7gElA-WraKKn_MhP4m5xAdWZRqdez7slaRWbGjzivmazolbJJaq1oWtPThe5YaNWNiRqRLf6K5te6NkKzx-WMxAKH4B8lhp_tsQyXAp-6yKO55ffZ5c3ZkrN4aHpkrFeg1rc8w'
+  'BQALg6EmooLfUqqukGv_omRk_zbtUuw_5NPseU9Oi67INSdqJJzlD8jJFO5UN8HzEZhMIEP9f88vQFTfBiCpC1Z6-kHioZdWG0qvNtsKcLKYWAqttTv4zqTnne7tk50ymvhdBUvJF9pqwSh5rWJzHLR0npamSvJzTSjRAqlVQ-vcz8qHeeunpx19gRPHPOTIrLM4zkGTasfLH-fzY7svcxYRCUdj49_8NhBhwFk'
 
 interface Credentials {
   id: string | undefined
@@ -31,6 +31,7 @@ interface MappedTrack {
   name: string
   href: string
   uri: string
+  id: string
 }
 
 export interface RemoveTrack {
@@ -133,7 +134,9 @@ export class Spotify {
     }
 
     const items = await this.getAllPlaylistTracks(playlist.tracks.href)
-    mappedPlaylist.tracks = this.trackReducer(items)
+    console.log(items)
+
+    if (items.length > 0) mappedPlaylist.tracks = this.trackReducer(items)
 
     return mappedPlaylist
   }
@@ -173,12 +176,42 @@ export class Spotify {
     return log
   }
 
+  async getLikedTracks(playlistTracks: MappedPlaylist) {
+    const ids = playlistTracks.tracks.map(track => track.id)
+
+    const liked = await this.handleLikedIds(ids, 0)
+
+    return playlistTracks.tracks.filter((track, index) => liked[index])
+  }
+
+  async handleLikedIds(ids: string[], start = 0) {
+    const url = `${BASE_URI}/me/tracks/contains?ids=${encodeURIComponent(
+      ids.slice(start, start + 50).join(',')
+    )}`
+
+    const opts: any = {
+      method: 'GET',
+    }
+    opts.headers = this.getPostHeader()
+
+    const res = await fetch(url, opts)
+    const liked = await res.json()
+
+    start += 50
+    if (start < ids.length) {
+      return liked.concat(await this.handleLikedIds(ids, start))
+    } else {
+      return liked
+    }
+  }
+
   trackReducer(tracks: any[]): MappedTrack[] {
     return tracks.map(track => {
       return {
         name: track.track.name,
         href: track.track.href,
         uri: track.track.uri,
+        id: track.track.id,
       }
     })
   }
